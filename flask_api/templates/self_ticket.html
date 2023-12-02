@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>已购机票</title>
+</head>
+<body>
+    <h1>已购机票</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>编号</th>
+                <th>航班号</th>
+                <th>座位号</th>
+                <th>乘客姓名</th>
+                <th>乘客手机号</th>
+                <th>付款金额</th>
+                <th>付款时间</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data %}
+                <tr>
+                    <td>{{item.id}}</td>
+                    <td>{{item.flight}}</td>
+                    <td>{{item.seatNumber}}</td>
+                    <td>{{item.passengerName}}</td>
+                    <td>{{item.passengerPhone}}</td>
+                    <td>{{item.paidMoney}}</td>
+                    <td>{{item.paidTime}}</td>
+                    <td>
+                        <a href="/customer/refund?nid={{item.id}}">退票</a>
+                    </td>
+
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

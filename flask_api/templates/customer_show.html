@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>个人首页</title>
+</head>
+<body>
+    <h1>个人首页</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>编号</th>
+                <th>用户名</th>
+                <th>真实姓名</th>
+                <th>手机号</th>
+                <th>性别</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data %}
+                <tr>
+                    <td>{{item.id}}</td>
+                    <td>{{item.userName}}</td>
+                    <td>{{item.realName}}</td>
+                    <td>{{item.phone}}</td>
+                    <td>{{item.gender}}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <button>
+        <a href="/customer/modify">修改个人信息</a>
+    </button>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>机场管理员看公告</title>
+</head>
+<body>
+    <h1>公告</h1>
+    <button>
+        <a href="/airportuser/board/add">添加公告</a>
+    </button>
+    <br>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>编号</th>
+                <th>涉及航班</th>
+                <th>内容</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data %}
+                <tr>
+                    <td>{{item.id}}</td>
+                    <td>{{item.flight}}</td>
+                    <td>{{item.dueTime}}</td>
+                    <td>{{item.content}}</td>
+                    <td>
+                        <a href="/airportuser/board/delete?nid={{item.id}}">删除</a>
+                    </td>
+
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>
