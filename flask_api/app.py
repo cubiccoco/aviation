@@ -5,10 +5,8 @@ import time
 app = Flask(__name__)
 
 USER = {
-    "id": "1",
-    "name": "",
-
-}
+    "id": "2",
+}  # 登陆之后设置USER信息
 
 
 # 顾客看公告（已完成）
@@ -24,23 +22,87 @@ def customer_board():
     conn.close()
 
     # 转换数据为 JSON 格式并返回
-    return jsonify({"data": data})
+    # return jsonify({"data": data})
+    return render_template("customer_board.html", data=data)
 
 
-# 顾客看所有航班（已完成）
-@app.route('/customer/flight', methods=['GET'])
+# 顾客看所有航班,顾客选择出发地、目的地、日期查询航班（已完成）
+@app.route('/customer/flight', methods=['GET', 'POST'])
 def customer_flight():
     conn = pymysql.connect(host="127.0.0.1", port=3306, user='root', passwd='root123', charset='utf8', db='aviation',
                            cursorclass=pymysql.cursors.DictCursor)
     cursor = conn.cursor()
-    sql = "SELECT * FROM flight;"
-    cursor.execute(sql)
+
+    if request.method == 'GET':
+        sql = "SELECT * FROM flight "
+        cursor.execute(sql)
+        data = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        # 转换数据为 JSON 格式并返回
+        # return jsonify({"data": data})
+        return render_template("customer_flight.html", data=data)
+
+    departure = request.form.get("departure")
+    terminal = request.form.get("terminal")
+    leaveDate = request.form.get("leaveDate")
+
+    sql = "SELECT * FROM flight where departure=%s && terminal=%s && date_format(leaveTime,'%%Y-%%m-%%d')=%s"
+    cursor.execute(sql, [departure, terminal, leaveDate])
     data = cursor.fetchall()
+
     cursor.close()
     conn.close()
+    return render_template("customer_flight.html", data=data)
 
-    # 转换数据为 JSON 格式并返回
-    return jsonify({"data": data})
+
+# 顾客买机票（已完成）
+@app.route('/customer/flight/buy', methods=['GET', 'POST'])
+def customer_buy():
+    flight_id = request.args.get('nid')
+    flight_id = int(flight_id)
+
+    conn = pymysql.connect(host="127.0.0.1", port=3306, user='root', passwd='root123', charset='utf8', db='aviation',
+                           cursorclass=pymysql.cursors.DictCursor)
+    cursor = conn.cursor()
+
+    if request.method == 'GET':
+        sql = "select leftTicket from flight where id=%s"
+        cursor.execute(sql, [flight_id])
+        data = cursor.fetchone()
+        if data["leftTicket"] == 0:
+            return "票卖光了，无法购买！"
+        return render_template('buy_ticket.html')  # 购买机票的页面
+
+    # 获取顾客输入的姓名、手机号、座位号
+    passengerName = request.form.get("passengerName")
+    passengerPhone = request.form.get("passengerPhone")
+    seatNumber = request.form.get("seatNumber")
+    paidTime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+
+    # 获取公司、票价
+    sql = "select company,ticketMoney,leftTicket from flight where id=%s"
+    cursor.execute(sql, [flight_id])
+    data = cursor.fetchone()
+    company = data["company"]
+    ticketMoney = data["ticketMoney"]
+    data["leftTicket"] -= 1
+
+    sql = "insert into ticket(customeruser,flight,company,seatNumber,passengerName,passengerPhone,paidMoney,paidTime) values(%s,%s,%s,%s,%s,%s,%s,%s)"
+    cursor.execute(sql,
+                   [USER["id"], flight_id, company, seatNumber, passengerName, passengerPhone, ticketMoney, paidTime])
+    conn.commit()
+
+    # 航班剩余票数-1
+    sql = "update flight set leftTicket=%s where id=%s"
+    cursor.execute(sql, [data["leftTicket"], flight_id])
+    conn.commit()
+    conn.close()
+    cursor.close()
+
+    # return jsonify({"msg": "购买成功！"})
+    return redirect("/customer/ticket")  # 返回顾客看已购机票的页面
 
 
 # 顾客看自己买的机票（已完成）
@@ -185,6 +247,78 @@ def board_delete():
     # return jsonify({"msg": "删除成功！"})
 
     return redirect('/airportuser/board')  # 返回机场管理员看公告的页面
+
+
+# 机场管理员看航班 //只能看到管理员所在机场的航班
+@app.route('/airportuser/flight', methods=['GET'])
+def airportuser_flight():
+    conn = pymysql.connect(host="127.0.0.1", port=3306, user='root', passwd='root123', charset='utf8', db='aviation',
+                           cursorclass=pymysql.cursors.DictCursor)
+    cursor = conn.cursor()
+    # 根据管理员id查到所属机场id airport_id
+
+    # 根据管理员所属机场id查到机场名airportName  where departure=%s || terminal=%s [airportName, airportName]
+
+    sql = "SELECT * FROM flight"
+    cursor.execute(sql)
+    data = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    # 转换数据为 JSON 格式并返回
+    # return jsonify({"data": data})
+    return render_template("airportuser_flight.html", data=data)
+
+
+# 机场管理员加航班 //只能加与管理员所在机场有关的航班
+@app.route('/airportuser/flight/add', methods=['GET', 'POST'])
+def flight_add():
+    if request.method == 'GET':
+        return render_template('flight_add.html')  # 购买机票的页面
+    # 获取机场管理员输入的航班信息
+    plane = request.form.get("plane")
+    departure = request.form.get("departure")
+    terminal = request.form.get("terminal")
+    leaveTime = request.form.get("leaveTime")
+    arriveTime = request.form.get("arriveTime")
+    totalTicket = request.form.get("totalTicket")
+    ticketMoney = request.form.get("ticketMoney")
+    company = request.form.get("company")
+
+    conn = pymysql.connect(host="127.0.0.1", port=3306, user='root', passwd='root123', charset='utf8', db='aviation',
+                           cursorclass=pymysql.cursors.DictCursor)
+    cursor = conn.cursor()
+    sql = "insert into flight(plane, departure, terminal,leaveTime,arriveTime,totalTicket,leftTicket,ticketMoney,company) values(%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+    cursor.execute(sql,
+                   [plane, departure, terminal, leaveTime, arriveTime, totalTicket, totalTicket, ticketMoney, company])
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    # 转换数据为 JSON 格式并返回
+    # return jsonify({"msg": "添加成功！"})
+    return redirect('/airportuser/flight')  # 返回机场管理员看航班的页面
+
+
+# 机场管理员删航班（已完成）
+@app.route('/airportuser/flight/delete', methods=['GET'])
+def flight_delete():
+    # 获取航班id
+    flight_id = request.args.get('nid')
+    flight_id = int(flight_id)
+
+    conn = pymysql.connect(host="127.0.0.1", port=3306, user='root', passwd='root123', charset='utf8', db='aviation',
+                           cursorclass=pymysql.cursors.DictCursor)
+    cursor = conn.cursor()
+    sql = "delete from flight where id=%s"
+    cursor.execute(sql, [flight_id])
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    # 转换数据为 JSON 格式并返回
+    # return jsonify({"msg": "删除成功！"})
+    return redirect('/airportuser/flight')  # 返回机场管理员看航班的页面
 
 
 if __name__ == '__main__':

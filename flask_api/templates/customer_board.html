@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>顾客看公告</title>
+</head>
+<body>
+    <h1>公告</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>编号</th>
+                <th>涉及航班</th>
+                <th>截止日期</th>
+                <th>内容</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data %}
+                <tr>
+                    <td>{{item.id}}</td>
+                    <td>{{item.flight}}</td>
+                    <td>{{item.dueTime}}</td>
+                    <td>{{item.content}}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>

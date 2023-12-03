@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h1>所有航班</h1>
+    <h5>筛选：</h5>
+    <form method="post">
+        出发地:
+        <select name="departure">
+            <option value="北京">北京</option>
+            <option value="上海">上海</option>
+            <option value="广州">广州</option>
+            <option value="深圳">深圳</option>
+        </select>
+        目的地:
+        <select name="terminal">
+            <option value="北京">北京</option>
+            <option value="上海">上海</option>
+            <option value="广州">广州</option>
+            <option value="深圳">深圳</option>
+        </select>
+        出发日期:
+        <input type="date" name="leaveDate">
+
+      <input type="submit" value="查询">
+  </form>
+    <br>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>航班号</th>
+                <th>飞机机型</th>
+                <th>出发地</th>
+                <th>目的地</th>
+                <th>出发时间</th>
+                <th>到达时间</th>
+                <th>剩余票数</th>
+                <th>票价</th>
+                <th>航空公司</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data %}
+                <tr>
+                    <td>{{item.id}}</td>
+                    <td>{{item.plane}}</td>
+                    <td>{{item.departure}}</td>
+                    <td>{{item.terminal}}</td>
+                    <td>{{item.leaveTime}}</td>
+                    <td>{{item.arriveTime}}</td>
+                    <td>{{item.leftTicket}}</td>
+                    <td>{{item.ticketMoney}}</td>
+                    <td>{{item.company}}</td>
+                    <td>
+                        <a href="/customer/flight/buy?nid={{item.id}}">购买</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
