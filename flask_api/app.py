@@ -1,12 +1,16 @@
-from flask import Flask, jsonify, request, redirect, render_template
+from flask import Flask, jsonify, request, redirect, render_template, session
 import pymysql
 import time
 
 app = Flask(__name__)
 
-USER = {
-    "id": "2",
-}  # 登陆之后设置USER信息
+app.config['SECRET_KEY'] = '123456'
+# id=session.get("id")
+# 测试
+@app.route('/')
+def login():
+    session['id'] = 2
+    return "登陆成功"
 
 
 # 顾客看公告（已完成）
@@ -26,7 +30,7 @@ def customer_board():
     return render_template("customer_board.html", data=data)
 
 
-# 顾客看所有航班,顾客选择出发地、目的地、日期查询航班（已完成）
+# 顾客看航班,顾客选择出发地、目的地、日期查询航班（已完成）
 @app.route('/customer/flight', methods=['GET', 'POST'])
 def customer_flight():
     conn = pymysql.connect(host="127.0.0.1", port=3306, user='root', passwd='root123', charset='utf8', db='aviation',
@@ -88,10 +92,11 @@ def customer_buy():
     company = data["company"]
     ticketMoney = data["ticketMoney"]
     data["leftTicket"] -= 1
+    customer_id = session.get("id")
 
     sql = "insert into ticket(customeruser,flight,company,seatNumber,passengerName,passengerPhone,paidMoney,paidTime) values(%s,%s,%s,%s,%s,%s,%s,%s)"
     cursor.execute(sql,
-                   [USER["id"], flight_id, company, seatNumber, passengerName, passengerPhone, ticketMoney, paidTime])
+                   [customer_id, flight_id, company, seatNumber, passengerName, passengerPhone, ticketMoney, paidTime])
     conn.commit()
 
     # 航班剩余票数-1
@@ -109,12 +114,13 @@ def customer_buy():
 @app.route('/customer/ticket', methods=['GET'])
 def customer_ticket():
     # 获取顾客id  id=
+    customer_id = session.get("id")
 
     conn = pymysql.connect(host="127.0.0.1", port=3306, user='root', passwd='root123', charset='utf8', db='aviation',
                            cursorclass=pymysql.cursors.DictCursor)
     cursor = conn.cursor()
     sql = "SELECT * FROM ticket where customeruser=%s"
-    cursor.execute(sql, [USER["id"]])
+    cursor.execute(sql, [customer_id])
     data = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -148,11 +154,13 @@ def customer_refund():
 # 显示顾客个人信息（已完成）
 @app.route('/customer/show', methods=['GET'])
 def customer_show():
+    customer_id = session.get("id")
+
     conn = pymysql.connect(host="127.0.0.1", port=3306, user='root', passwd='root123', charset='utf8', db='aviation',
                            cursorclass=pymysql.cursors.DictCursor)
     cursor = conn.cursor()
     sql = "select * from customeruser where id=%s"
-    cursor.execute(sql, [USER["id"]])
+    cursor.execute(sql, [customer_id])
     data = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -160,7 +168,7 @@ def customer_show():
     return render_template("customer_show.html", data=data)
 
 
-# 顾客改自己用户名、密码（已完成）
+# 顾客改自己信息（已完成）
 @app.route('/customer/modify', methods=['GET', 'POST'])
 def customer_modify():
     if request.method == 'GET':
@@ -169,12 +177,13 @@ def customer_modify():
     # 获取顾客输入用户名、密码
     userName = request.form.get("userName")
     password = request.form.get("password")
+    customer_id = session.get("id")
 
     conn = pymysql.connect(host="127.0.0.1", port=3306, user='root', passwd='root123', charset='utf8', db='aviation',
                            cursorclass=pymysql.cursors.DictCursor)
     cursor = conn.cursor()
     sql = "update customeruser set userName=%s, password=%s where id=%s"
-    cursor.execute(sql, [userName, password, USER["id"]])
+    cursor.execute(sql, [userName, password, customer_id])
     conn.commit()
     cursor.close()
     conn.close()
@@ -256,11 +265,17 @@ def airportuser_flight():
                            cursorclass=pymysql.cursors.DictCursor)
     cursor = conn.cursor()
     # 根据管理员id查到所属机场id airport_id
+    customer_id = session.get("id")
+    sql1 = "select airport from airportuser where id=%s"
+    cursor.execute(sql1, [customer_id])
+    data1 = cursor.fetchone()
+    # 根据管理员所属机场id查到机场名airportName
+    sql2 = "select airportname from airport where id=%s"
+    cursor.execute(sql2, [data1["airport"]])
+    data2 = cursor.fetchone()
 
-    # 根据管理员所属机场id查到机场名airportName  where departure=%s || terminal=%s [airportName, airportName]
-
-    sql = "SELECT * FROM flight"
-    cursor.execute(sql)
+    sql = "SELECT * FROM flight where departure=%s || terminal=%s"
+    cursor.execute(sql, [data2["airportname"], data2["airportname"]])
     data = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -288,6 +303,20 @@ def flight_add():
     conn = pymysql.connect(host="127.0.0.1", port=3306, user='root', passwd='root123', charset='utf8', db='aviation',
                            cursorclass=pymysql.cursors.DictCursor)
     cursor = conn.cursor()
+    # 判断管理员添加的航班是不是与管理员机场有关的航班
+    # 根据管理员id查到所属机场id airport_id
+    customer_id = session.get("id")
+    sql1 = "select airport from airportuser where id=%s"
+    cursor.execute(sql1, [customer_id])
+    data1 = cursor.fetchone()
+    # 根据管理员所属机场id查到机场名airportName
+    sql2 = "select airportname from airport where id=%s"
+    cursor.execute(sql2, [data1["airport"]])
+    data2 = cursor.fetchone()
+    if departure!=data2["airportname"] and terminal!=data2["airportname"]:
+        return '<script> alert("请添加与本人所属机场有关的航班！");window.open("/url");</script>'
+
+
     sql = "insert into flight(plane, departure, terminal,leaveTime,arriveTime,totalTicket,leftTicket,ticketMoney,company) values(%s,%s,%s,%s,%s,%s,%s,%s,%s)"
     cursor.execute(sql,
                    [plane, departure, terminal, leaveTime, arriveTime, totalTicket, totalTicket, ticketMoney, company])
@@ -300,7 +329,7 @@ def flight_add():
     return redirect('/airportuser/flight')  # 返回机场管理员看航班的页面
 
 
-# 机场管理员删航班（已完成）
+# 机场管理员删航班
 @app.route('/airportuser/flight/delete', methods=['GET'])
 def flight_delete():
     # 获取航班id
